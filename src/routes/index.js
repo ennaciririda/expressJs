@@ -23,6 +23,10 @@ const router = express.Router();
 import dotenv from 'dotenv';
 dotenv.config();
 
+router.get('/hello', (req, res) => {
+  res.send('Hello, World!');
+});
+
 // POST ROUTES
 router.post('/create-post', upload.array('images', 5), createPost);
 router.get('/posts', getAllPosts);
