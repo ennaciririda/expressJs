@@ -1,15 +1,11 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
-const prisma = new PrismaClient()
 
 async function main() {
-  const user = await prisma.user.create({
-    data: {
-      name: 'Alice',
-      email: 'alice@prisma.io',
-    },
-  })
-  console.log(user)
+  const post = await prisma.post.findMany()
+  // delete all posts
+    await prisma.post.deleteMany()
 }
 
 main()

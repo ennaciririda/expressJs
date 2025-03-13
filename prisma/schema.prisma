@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,28 +7,245 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Member {
-  cin       String   @id @unique
-  name      String
-  email     String
-  password  String
-  role      Role
-  isActive  Boolean
-  joinedDate DateTime
-  leftDate   DateTime?
-  committee Committee @relation(fields: [committeeId], references: [id])
-  committeeId Int
-}
-
-model Committee {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  members     Member[]
-}
-
+// ENUMS
 enum Role {
   PRESIDENT
   COMMITTEE_HEAD
-  MEMBER
+  COMMITTEE_MEMBER
+}
+
+enum MemberShipType {
+  WORKER
+  PARTICIPANT
+  WIDOWTEACHER
+  ORPHANTEACHER
+}
+
+enum EducationTarget {
+  ORPHAN
+  WIDOW
+}
+
+enum Gender {
+  male
+  female
+}
+// end ENUMS
+
+
+// Commitee model
+model Committee {
+  id       Int       @id @default(autoincrement())
+  name     String
+  members  Member[] 
+  projects Project[]
+  children Child[]
+  families Family[]
+  subjects Subject[]
+}
+
+
+// Member model
+model Member {
+  cin                String          @id @unique
+  name               String
+  email              String
+  password           String
+  role               Role           @default(COMMITTEE_MEMBER)
+  joinedDate         DateTime?
+  leftDate           DateTime?
+  committee          Committee?      @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  committeeId        Int?
+  subscriptionStatus Boolean         @default(false)
+  memberType         MemberShipType  @default(WORKER)
+  posts              Post[]
+  Subject            Subject[]
+}
+
+// Family model
+
+model Family {
+  id               Int       @id @default(autoincrement())
+  registrationDate DateTime
+  OrphansLastName  String
+  Housing          String
+  HousingType      String
+  RentalAmount     String
+  importantNeeds   String
+  committee        Committee @relation(fields: [committeeId], references: [id])
+  committeeId      Int
+  Widow            Widow     @relation(fields: [widowId], references: [id], onDelete: Cascade)
+  widowId          Int       @unique
+  children         Child[]
+  projects         Project[] 
+}
+
+// Widow model
+model Widow {
+  id                    Int                      @id @default(autoincrement())
+  WidowsName            String
+  HealthStatus          String
+  AddressOfHeadOfFamily String
+  phoneNumber           String
+  cinNumber             String
+  level                 String
+  diplome               String
+  family                Family ?
+  Job                   String
+  salaire               String
+  ExtraSalaire          String
+  importantNeeds        String // will be removed
+  committeeId           Int
+  absences              Absence[]
+  remarks               Remark[]
+  subjectEnrollments    WidowSubjectEnrollment[]
+}
+
+// Child model
+model Child {
+  id                 Int                       @id @default(autoincrement())
+  fullName           String
+  dateOfBirth        DateTime
+  gender             String
+  schoolLevel        String
+  avatar             String?
+  family             Family                    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  familyId           Int
+  committee          Committee                 @relation(fields: [committeeId], references: [id])
+  committeeId        Int
+  semesterGrades     SemesterGrade[]
+  subjectEnrollments OrphanSubjectEnrollment[]
+  remarks            Remark[]
+  absences           Absence[]
+  projects           Project[]
+}
+
+
+
+
+model Image {
+  id      Int     @id @default(autoincrement())
+  url     String
+  fullUrl String? @default("")
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId  Int
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  author    Member   @relation(fields: [authorId], references: [cin], onDelete: Cascade)
+  authorId  String
+  createdAt DateTime @default(now())
+  images    Image[]
+}
+
+
+
+model SemesterGrade {
+  id         Int      @id @default(autoincrement())
+  yearNumber Int
+  yearLabel  String
+  grade      String
+  child      Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  childId    Int
+}
+
+model Subject {
+  id                Int                       @id @default(autoincrement())
+  name              String
+  levelTargeted     String?                   @default("الكل")
+  committee         Committee                 @relation(fields: [committeeId], references: [id])
+  committeeId       Int
+  teacher           Member                    @relation(fields: [teacherId], references: [cin])
+  teacherId         String
+  target            EducationTarget           @default(ORPHAN)
+  orphanEnrollments OrphanSubjectEnrollment[]
+  widowEnrollments  WidowSubjectEnrollment[]
+  classes           Class[]
+  remarks           Remark[]
+  absences          Absence[]
+}
+
+model OrphanSubjectEnrollment {
+  child          Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  childId        Int
+  Subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId      Int
+  enrollmentDate DateTime @default(now())
+
+  @@id([childId, subjectId])
+}
+
+model WidowSubjectEnrollment {
+  widow          Widow    @relation(fields: [widowId], references: [id], onDelete: Cascade)
+  widowId        Int
+  Subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId      Int
+  enrollmentDate DateTime @default(now())
+
+  @@id([widowId, subjectId])
+}
+
+model Class {
+  id        Int             @id @default(autoincrement())
+  name      String
+  classDate DateTime
+  startTime String
+  Subject   Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId Int
+  target    EducationTarget @default(ORPHAN)
+  absences  Absence[]
+}
+
+model Remark {
+  id        Int      @id @default(autoincrement())
+  content   String
+  child     Child?   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  widow     Widow?   @relation(fields: [widowId], references: [id], onDelete: Cascade)
+  widowId   Int?
+  childId   Int?
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId Int
+
+  @@index([subjectId])
+  @@index([childId])
+  @@index([widowId])
+}
+
+model Absence {
+  id            Int      @id @default(autoincrement())
+  child         Child?   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  childId       Int? 
+  widow         Widow?   @relation(fields: [widowId], references: [id], onDelete: Cascade)
+  widowId       Int?
+  class         Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classId       Int
+  orphanSubject Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId     Int
+  isAbsent      Boolean  @default(false)
+  isJustified   Boolean  @default(false)
+
+  @@unique([childId, widowId, classId, subjectId])
+  @@index([childId, subjectId])
+  @@index([widowId, subjectId])
+}
+
+
+
+model Project {
+  id                  Int       @id @default(autoincrement())
+  name                String
+  description         String
+  Date                DateTime
+  committeeBudget     Float
+  externalBudget      Float
+  totalBudget         Float
+  forOrphans          Boolean
+  familyBenificiaries Family[]
+  orphanBenificiaries Child[]
+  totalBenificiaries  Int
+  committee           Committee @relation(fields: [committeeId], references: [id])
+  committeeId         Int
 }
